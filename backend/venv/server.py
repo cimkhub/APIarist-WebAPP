@@ -22,8 +22,12 @@ def upload_file():
         file.save(file_path)
 
         # Process the Excel file
-        df = pd.read_excel(file_path)
-        os.remove(file_path)  # Delete the file after reading
+        try:
+            df = pd.read_excel(file_path)
+        except Exception as e:
+            return f"Error reading the Excel file: {e}", 500
+        finally:
+            os.remove(file_path)  # Delete the file after reading
 
         # Convert the DataFrame to JSON format
         result = []
@@ -37,7 +41,10 @@ API_DATA_FILE = 'alphavantage_api_endpoints.xlsx'
 if not os.path.exists(API_DATA_FILE):
     raise FileNotFoundError(f"{API_DATA_FILE} does not exist")
 
-df_api_data = pd.read_excel(API_DATA_FILE)
+try:
+    df_api_data = pd.read_excel(API_DATA_FILE)
+except Exception as e:
+    raise RuntimeError(f"Error reading API data file: {e}")
 
 # Debugging: Print the column names and first few rows
 print("Column names:", df_api_data.columns.tolist())
@@ -85,7 +92,11 @@ def get_parameters():
         return 'Column names do not match', 400
 
     # Perform the query and provide debugging output
-    matching_row = df_api_data[(df_api_data['API'] == api_doc) & (df_api_data['API Endpoint'] == endpoint)].iloc[0]
+    matching_rows = df_api_data[(df_api_data['API'] == api_doc) & (df_api_data['API Endpoint'] == endpoint)]
+    if matching_rows.empty:
+        return 'No matching endpoint found', 404
+
+    matching_row = matching_rows.iloc[0]
     print("Matching row for parameters:")
     print(matching_row)
 
